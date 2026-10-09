@@ -6,24 +6,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      THEOS: ${{ github.workspace }}/theos
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y git make curl unzip liblzma-dev build-essential fakeroot perl
-
-      - name: Install Theos
-        run: |
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-
-      - name: Compile & Build deb
-        run: |
-          export THEOS="${{ github.workspace }}/theos"
-          make package FINALPACKAGE=1
+      - name: Build tweak using Theos
+        uses: theos/theos-action@main
+        with:
+          target: iphone:clang:17.0:17.0
+          package: true
 
       - name: Upload deb
         uses: actions/upload-artifact@v4
