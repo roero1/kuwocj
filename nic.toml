@@ -1,0 +1,16 @@
+[package]
+name = "KuwoAutoPlay"
+identifier = "com.kuwoautoplay.tweak"
+version = "0.0.1"
+author = "Dev"
+description = "打开酷我音乐纯净版(com.yeelion.kwplayersimple)自动点击播放，适配Relaxin松弛树隐根 iOS17.0"
+package_scheme = "roothide"
+archs = ["iphoneos-arm64"]
+
+[build]
+target = "iphone:clang:17.0:17.0"
+
+[[tweaks]]
+name = "KuwoAutoPlay"
+files = ["Sources/KuwoAutoPlay/Tweak.x"]
+frameworks = ["UIKit"]
