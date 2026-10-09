@@ -25,20 +25,23 @@ jobs:
           sudo apt update
           sudo apt install -y curl git build-essential libplist-dev libxml2-dev bzip2
 
-      # ✅ 修改点：直接从github拉theos，不再走gitee
       - name: 安装配置Theos
         run: |
           git clone --depth 1 https://github.com/theos/theos.git ~/theos
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
           echo "$HOME/theos/bin" >> $GITHUB_PATH
 
-      # ✅ SDK 用 jsdelivr 加速（jsdelivr可以代理 raw.githubusercontent，稳定性好很多）
-      - name: 导入固定iOS编译SDK
+      - name: 导入固定iOS编译SDK（带重试+双CDN兜底）
         run: |
           mkdir -p ~/theos/sdks
           cd ~/theos/sdks
-          wget -q https://cdn.jsdelivr.net/gh/theos/sdks@master/iPhoneOS15.0.sdk.tar.xz
-          tar -xf iPhoneOS15.0.sdk.tar.xz
+          FILE="iPhoneOS15.0.sdk.tar.xz"
+          # 主CDN: jsdelivr
+          if ! wget --timeout=30 --tries=3 -q "https://cdn.jsdelivr.net/gh/theos/sdks@master/$FILE"; then
+            echo "主CDN下载失败，切换备用CDN"
+            wget --timeout=30 --tries=3 -q "https://ghproxy.com/https://github.com/theos/sdks/raw/master/$FILE"
+          fi
+          tar -xf "$FILE"
 
       - name: 执行Theos编译
         run: |
