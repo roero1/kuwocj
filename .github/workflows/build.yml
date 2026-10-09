@@ -6,6 +6,8 @@ on:
 
 env:
   NODE_OPTIONS: --no-warnings
+  THEOS: ${{ github.workspace }}/theos
+  PATH: ${{ github.workspace }}/theos/bin:${{ env.PATH }}
 
 jobs:
   build:
@@ -25,23 +27,26 @@ jobs:
           sudo apt update
           sudo apt install -y curl git build-essential libplist-dev libxml2-dev bzip2
 
-      - name: 安装配置Theos
-        run: |
-          git clone --depth 1 https://github.com/theos/theos.git ~/theos
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-          echo "$HOME/theos/bin" >> $GITHUB_PATH
+      - name: 缓存Theos（含SDK，大幅减少重复下载）
+        id: cache-theos
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/theos
+          key: theos-cache-15.0
 
-      - name: 导入固定iOS编译SDK（带重试+双CDN兜底）
+      - name: 安装配置Theos
+        if: ${{ steps.cache-theos.outputs.cache-hit != 'true' }}
         run: |
-          mkdir -p ~/theos/sdks
-          cd ~/theos/sdks
-          FILE="iPhoneOS15.0.sdk.tar.xz"
-          # 主CDN: jsdelivr
-          if ! wget --timeout=30 --tries=3 -q "https://cdn.jsdelivr.net/gh/theos/sdks@master/$FILE"; then
-            echo "主CDN下载失败，切换备用CDN"
-            wget --timeout=30 --tries=3 -q "https://ghproxy.com/https://github.com/theos/sdks/raw/master/$FILE"
-          fi
-          tar -xf "$FILE"
+          git clone --depth 1 https://github.com/theos/theos.git $THEOS
+
+      - name: 自动获取 iPhoneOS15.0 SDK（使用theos sdks.sh，ghproxy加速）
+        if: ${{ steps.cache-theos.outputs.cache-hit != 'true' }}
+        run: |
+          cd $THEOS
+          # 使用ghproxy代理，替换脚本内raw.githubusercontent.com链接
+          sed -i 's|https://raw.githubusercontent.com|https://ghproxy.com/https://raw.githubusercontent.com|g' bin/sdks.sh
+          chmod +x bin/sdks.sh
+          ./bin/sdks.sh install iPhoneOS15.0
 
       - name: 执行Theos编译
         run: |
