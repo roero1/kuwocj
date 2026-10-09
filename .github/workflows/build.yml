@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt update
           sudo apt install -y git make curl unzip liblzma-dev build-essential fakeroot perl
@@ -19,8 +19,10 @@ jobs:
       - name: Install Theos
         run: |
           bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          # 手动拉取 iOS SDK (重点！之前就是缺这个)
+          git clone https://github.com/theos/sdks $THEOS/sdks
 
-      - name: Build
+      - name: Build Tweak (rootless)
         run: |
           export THEOS="${{ github.workspace }}/theos"
           make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
