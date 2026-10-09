@@ -1,55 +1,27 @@
-name: Theos Tweak Build
+name: Build KuwoAutoPlay
 on:
   push:
-    branches: [ main, master ]
   workflow_dispatch:
-
-env:
-  NODE_OPTIONS: --no-warnings
-  THEOS: ${{ github.workspace }}/theos
-  PATH: ${{ github.workspace }}/theos/bin:${{ env.PATH }}
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
+    env:
+      THEOS: ${{ github.workspace }}/theos
     steps:
-      - name: 拉取项目代码
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 配置Node稳定环境
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          allow-v0: true
-
-      - name: 初始化系统依赖
+      - name: Install Theos
         run: |
-          sudo apt update
-          sudo apt install -y curl git build-essential libplist-dev libxml2-dev bzip2 fakeroot
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          # !!! 删掉了 git clone sdks，安装脚本自带下载SDK，不要再手动拉 !!!
 
-      - name: 下载 Theos（强制执行，不再判断缓存）
+      - name: Build rootless deb
         run: |
-          rm -rf $THEOS
-          git clone --depth 1 https://github.com/theos/theos.git $THEOS
+          export THEOS="${{ github.workspace }}/theos"
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
 
-      - name: 下载 iPhoneOS15.0 SDK（nightly.link CDN）
-        run: |
-          mkdir -p $THEOS/sdks
-          cd $THEOS/sdks
-          FILE="iPhoneOS15.0.sdk.tar.xz"
-          rm -f $FILE
-          echo "尝试从 nightly.link 下载 SDK..."
-          wget --timeout=45 --tries=3 -q "https://nightly.link/theos/sdks/workflows/main/master/iPhoneOS15.0.sdk.tar.xz" -O $FILE
-          tar -xf $FILE
-
-      - name: 执行Theos编译
-        run: |
-          cd $GITHUB_WORKSPACE
-          make clean
-          make package THEOS_DEVICE_SDK=iPhoneOS15.0
-
-      - name: 上传编译成品deb
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Tweak-成品包
-          path: ./packages/*.deb
+          path: packages/*.deb
