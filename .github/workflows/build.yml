@@ -5,29 +5,23 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     env:
       THEOS: ${{ github.workspace }}/theos
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y git make curl unzip liblzma-dev build-essential fakeroot perl
-
       - name: Install Theos
         run: |
           bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-          # 手动拉取 iOS SDK (重点！之前就是缺这个)
-          git clone https://github.com/theos/sdks $THEOS/sdks
+          # !!! 删掉了 git clone sdks，安装脚本自带下载SDK，不要再手动拉 !!!
 
-      - name: Build Tweak (rootless)
+      - name: Build rootless deb
         run: |
           export THEOS="${{ github.workspace }}/theos"
           make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
 
-      - name: Upload deb
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           path: packages/*.deb
