@@ -1,5 +1,27 @@
+name: Build KuwoAutoPlay
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    env:
+      THEOS: ${{ github.workspace }}/theos
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Install Theos
-        env:
-          THEOS: ${{ github.workspace }}/theos
         run: |
-          curl -fsSL --retry 5 --connect-timeout 30 https://raw.githubusercontent.com/theos/theos/master/bin/install-theos | bash
+          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          # !!! 删掉了 git clone sdks，安装脚本自带下载SDK，不要再手动拉 !!!
+
+      - name: Build rootless deb
+        run: |
+          export THEOS="${{ github.workspace }}/theos"
+          make package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=rootless
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: packages/*.deb
