@@ -1,12 +1,9 @@
 name: Theos Tweak Build
-
-# 触发条件：推送代码、手动运行工作流
 on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
 
-# 解决Node版本兼容警告，强制适配兼容模式
 env:
   NODE_OPTIONS: --no-warnings
 
@@ -17,7 +14,6 @@ jobs:
       - name: 拉取项目代码
         uses: actions/checkout@v4
 
-      # 规避Node20/24版本报错，固定稳定运行环境
       - name: 配置Node稳定环境
         uses: actions/setup-node@v4
         with:
@@ -29,20 +25,19 @@ jobs:
           sudo apt update
           sudo apt install -y curl git build-essential libplist-dev libxml2-dev bzip2
 
-      # 国内镜像加速安装Theos，替换官方超时脚本
+      # ✅ 修改点：直接从github拉theos，不再走gitee
       - name: 安装配置Theos
         run: |
-          git clone --depth 1 https://gitee.com/mirrors/theos.git ~/theos
+          git clone --depth 1 https://github.com/theos/theos.git ~/theos
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
           echo "$HOME/theos/bin" >> $GITHUB_PATH
 
-      # 手动缓存iOS SDK，彻底解决github api请求失败
+      # ✅ SDK 用 jsdelivr 加速（jsdelivr可以代理 raw.githubusercontent，稳定性好很多）
       - name: 导入固定iOS编译SDK
         run: |
           mkdir -p ~/theos/sdks
           cd ~/theos/sdks
-          # 通用稳定SDK，兼容全系iOS越狱编译
-          wget -q https://github.com/theos/sdks/raw/master/iPhoneOS15.0.sdk.tar.xz
+          wget -q https://cdn.jsdelivr.net/gh/theos/sdks@master/iPhoneOS15.0.sdk.tar.xz
           tar -xf iPhoneOS15.0.sdk.tar.xz
 
       - name: 执行Theos编译
@@ -51,7 +46,6 @@ jobs:
           make clean
           make package THEOS_DEVICE_SDK=iPhoneOS15.0
 
-      # 打包输出编译成品deb文件
       - name: 上传编译成品
         uses: actions/upload-artifact@v4
         with:
