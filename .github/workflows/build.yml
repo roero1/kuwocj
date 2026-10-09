@@ -25,28 +25,22 @@ jobs:
       - name: 初始化系统依赖
         run: |
           sudo apt update
-          sudo apt install -y curl git build-essential libplist-dev libxml2-dev bzip2
+          sudo apt install -y curl git build-essential libplist-dev libxml2-dev bzip2 fakeroot
 
-      - name: 缓存Theos（含SDK，大幅减少重复下载）
-        id: cache-theos
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/theos
-          key: theos-cache-15.0
-
-      - name: 安装配置Theos
-        if: ${{ steps.cache-theos.outputs.cache-hit != 'true' }}
+      - name: 下载 Theos（强制执行，不再判断缓存）
         run: |
+          rm -rf $THEOS
           git clone --depth 1 https://github.com/theos/theos.git $THEOS
 
-      - name: 自动获取 iPhoneOS15.0 SDK（使用theos sdks.sh，ghproxy加速）
-        if: ${{ steps.cache-theos.outputs.cache-hit != 'true' }}
+      - name: 下载 iPhoneOS15.0 SDK（nightly.link CDN）
         run: |
-          cd $THEOS
-          # 使用ghproxy代理，替换脚本内raw.githubusercontent.com链接
-          sed -i 's|https://raw.githubusercontent.com|https://ghproxy.com/https://raw.githubusercontent.com|g' bin/sdks.sh
-          chmod +x bin/sdks.sh
-          ./bin/sdks.sh install iPhoneOS15.0
+          mkdir -p $THEOS/sdks
+          cd $THEOS/sdks
+          FILE="iPhoneOS15.0.sdk.tar.xz"
+          rm -f $FILE
+          echo "尝试从 nightly.link 下载 SDK..."
+          wget --timeout=45 --tries=3 -q "https://nightly.link/theos/sdks/workflows/main/master/iPhoneOS15.0.sdk.tar.xz" -O $FILE
+          tar -xf $FILE
 
       - name: 执行Theos编译
         run: |
@@ -54,7 +48,7 @@ jobs:
           make clean
           make package THEOS_DEVICE_SDK=iPhoneOS15.0
 
-      - name: 上传编译成品
+      - name: 上传编译成品deb
         uses: actions/upload-artifact@v4
         with:
           name: Tweak-成品包
